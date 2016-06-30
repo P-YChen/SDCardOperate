@@ -27,6 +27,7 @@ int main()
         u8 buf[1024*10];
         u32 vAddress;
         u32 vSize;
+        u8 base = 10;
         int i, ret;
         
         debug ("buf = 0x%08x", buf);
@@ -59,11 +60,31 @@ int main()
                 putc ('\n');
                 while(--i >= 0)
                 {
+                    if (str[i] == 'x' || str[i] == 'X') {
+                        if ((i-1)>=0 && str[i-1] == '0') {
+                            base = 16;
+                            str[i-1] = ' ';
+                        }
+                        else {
+                            printf ("Address Error!\r\n");
+                            continue;
+                        }
+                        
+                    }
                     if (str[i] < '0' || str[i] > '9')
                         str[i] = ' ';
                 }
+                switch (base)
+                {
+                    case 10:
+                        sscanf (str, "%u %u", &vAddress, &vSize);
+                        break;
+                    case 16:
+                        sscanf (str, "%x %u", &vAddress, &vSize);
+                    default:
+                        break;
+                }
 
-                sscanf (str, "%u %u", &vAddress, &vSize);
                 if (sd_read (vAddress, buf, vSize) < 0){
                     printf ("## Warning: read card fail\r\n");
                     return -1;    
