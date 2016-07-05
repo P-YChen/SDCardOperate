@@ -67,7 +67,7 @@ int main()
                         }
                         else {
                             printf ("Address Error!\r\n");
-                            continue;
+                            goto LOOP_END;
                         }
                         
                     }
@@ -97,10 +97,10 @@ int main()
             case 'w':
             case 'W':
             {
+LOOP_END:
                 break;
             }
         }
-        
     }
     
     return 0;
