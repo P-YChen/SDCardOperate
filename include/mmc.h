@@ -180,6 +180,7 @@ typedef unsigned int uint32_t;
 #define SD_DATA_SIZE_HALF_WORD	(1 << 22)
 #define SD_DATA_SIZE_WORD	(2 << 22)
 
+#define SD_TARSP	(1<<20)
 #define SD_RACMD	(1<<19)
 
 #define SD_BLOCK_MODE_STREAM	(0<<17)

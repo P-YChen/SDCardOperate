@@ -365,3 +365,143 @@ int8_t sd_read (u32 src, u8 *des, u32 size)
 
 	return 0;
 }
+
+int8_t sd_block_write (u8 *src, u32 des, u32 len)
+{
+	u32 SD_Data_Con;
+	u32 *src_u32 = (u32 *)src;
+	u32 *res;
+	debug ("src = 0x%08p --> des = 0x%08x", src, des);
+
+	//SDIDTimer = 0x7fffff;	
+	
+	// Send CMD16
+	res = sd_cmd (MMC_CMD_SET_BLOCKLEN, len, SDI_FLAG_RSP);
+	debug ("CMD16 res[0] = 0x%08x", res[0]);
+	
+	switch (SD_Type)
+	{
+		case SD_TYPE_SD:
+			SDIBSize = SD_BLOCK_SIZE;
+			break;
+		case SD_TYPE_SDHC:
+			SDIBSize = SD_BLOCK_SIZE;
+			break;
+		default:
+			printf ("### Unknown SD Card Type, Please reset the board.\r\n");
+			for(;;);
+	}
+	
+	SD_Data_Con = SD_DATA_SIZE_WORD | SD_BLOCK_MODE_BLOCK | SD_WIDE_BUS_WIDE | \
+	              SD_DATA_MODE_TRANSMIT | SD_TARSP | SD_BLOCK_NUMBER(len) | SD_DATA_TRANSFER_START;
+
+	SDIDatCon = SD_Data_Con;
+	
+	debug ("SDIDatCon: 0x%08x", SD_Data_Con);
+	
+	// Send CMD24
+	res = sd_cmd (MMC_CMD_WRITE_SINGLE_BLOCK, (SD_Type == SD_TYPE_SDHC) ? (des >> 9):des, SDI_FLAG_RSP);
+	debug ("CMD24 res[0] = 0x%08x", res[0]);
+	
+	while (len > 0)
+	{
+		u32 SDDatSta = SDIDatSta;
+		u8 fifo = FIFO_WORDS;
+		u32 SDFSta = SDIFSTA;
+
+		//debug ("len :%d", len);
+		//debug ("fifo:%d", fifo);
+		//debug ("fsta:0x%08x", SDFSta);
+		//debug ("dsta:0x%08x", SDDatSta);
+		if (SDDatSta & (SD_DATSTA_CRCFAIL |\
+						SD_DATSTA_RXCRCFAIL |\
+						SD_DATSTA_DATATIMEOUT))
+		{
+			printf ("### SD Receive Data Fail.\r\n");
+			printf ("SDDatSta = 0x%08x\r\n", SDDatSta);
+			return -1;	
+		}
+		
+
+
+		//while (fifo--)
+		//{
+			//debug ("\tfifo:%d", fifo);
+			udelay (1000);
+			SDIDAT = *(src_u32++);
+			//*(des_u32++) = SDIDAT;
+			if (len >= 4) {
+				len -= 4;
+				//debug ("\tlen: %d", len);
+			}
+			else {
+				len = 0;
+				//debug ("\tlen: %d", len);
+			}
+		//}	
+	}
+	
+	while (!(SDIDatSta & (1<<4))){}
+	SDIDatCon = 0;
+	
+	if (!(SDIDatSta & (1<<4)))
+		printf ("### SD Transfer not finish.\r\n");
+		
+	return 0;
+}
+
+int8_t sd_write (u8 *src, u32 des, u32 size)
+{
+	u32 end, part_start, part_end, part_len, aligned_start, aligned_end;
+	u32 sd_block_size, sd_block_address;
+
+	if (size == 0)
+	{
+		return 0;
+	}
+
+	if (src == NULL)
+	{
+		printf ("SD Card write error!\r\n");
+		return -1;
+	}
+	
+	sd_block_size = SD_BLOCK_SIZE;
+	sd_block_address = ~(sd_block_size -1);
+
+	end = des + size;
+	part_start = ~sd_block_address & des;
+	part_end = ~sd_block_address & end;
+	aligned_start = sd_block_address & des;
+	aligned_end = sd_block_address & end;
+
+	if (part_start) {
+		part_len = sd_block_size - part_start;
+		if (sd_block_read(aligned_start, sd_buf, SD_BLOCK_SIZE) < 0)
+			return -1;
+		
+		memcpy (sd_buf+part_start, src, (size>sd_block_size)?part_len:size);
+		if (sd_block_write (sd_buf, des, SD_BLOCK_SIZE) < 0)
+			return -1;
+
+		des += (size>sd_block_size)?part_len:size;
+		src += (size>sd_block_size)?part_len:size;
+		size -= (size>sd_block_size)?part_len:size;
+	}
+	for (;des < aligned_end; src += sd_block_size, des += sd_block_size) {
+		if (sd_block_write((u8 *)src, des, sd_block_size))
+			return -1;
+		size -= sd_block_size;
+	}
+
+	if (part_end && des < end) {
+		if (sd_block_read(aligned_end, sd_buf, sd_block_size)<0)
+			return -1;
+		memcpy (sd_buf, src, part_end);
+		if (sd_block_write(sd_buf, aligned_end, sd_block_size)<0)
+			return -1;
+	}
+	
+
+	return 0;
+}
