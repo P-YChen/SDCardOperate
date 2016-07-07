@@ -58,3 +58,6 @@ cscope.*
 /onenand_ipl/onenand-ipl*
 /onenand_ipl/board/*/onenand*
 /onenand_ipl/board/*/*.S
+
+# tools
+/tools/ParseTimeAndDate
