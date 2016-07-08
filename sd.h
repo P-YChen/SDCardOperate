@@ -1,7 +1,7 @@
 #ifndef _S3C2440_SD_H
 #define _S3C2440_SD_H
 #include "types.h"
-#define DEBUG_FLAG
+//#define DEBUG_FLAG
 
 #ifdef DEBUG_FLAG
 #define debug(fmt, args...) printf("[DEBUG] "fmt"\r\n", ##args);
