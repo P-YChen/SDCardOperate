@@ -88,7 +88,7 @@ void print_cid (u32 *reg)
 int sd_init (void)
 {
 	u32 *res;
-	u8 retry = 10;
+	u8 retry = 15;
 	u8 is_finish = 0;
 	int ret = -1;
 	
@@ -136,7 +136,7 @@ int sd_init (void)
 	
 	// try 10 times to get card status (busy)
 	while (retry--)	{
-		printf ("- %d times to try\r\n", 10-retry);
+		printf ("- %d times to try\r\n", 15-retry);
 		udelay (5000);
 		// Send CMD55
 		res = sd_cmd (MMC_CMD_APP_CMD, 0, SDI_FLAG_RSP);
